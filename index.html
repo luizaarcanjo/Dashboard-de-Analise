@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <base href="/">
-    <title>Análise de Clientes</title>
+    <title>Dashboard de Análise</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -119,17 +119,44 @@
             .botoes {
                 grid-template-columns: 1fr;
             }
-            
+
             button {
                 width: 100%;
             }
+        }
+
+        /* Estilos para o QR Code */
+        .qr-code-container {
+            text-align: center;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            max-width: 300px;
+        }
+
+        #qrcode {
+            margin: 15px auto;
+            width: fit-content;
+        }
+
+        .qr-code-container p {
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        .qr-code-container .qr-info {
+            font-size: 0.8em;
+            color: #888;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Dashboard de Análise</h1>
-        
+
         <div class="botoes">
             <button onclick="carregarImagem('cluster')">Clusterização</button>
             <button onclick="carregarImagem('clv')">CLV</button>
@@ -138,7 +165,13 @@
             <button onclick="carregarImagem('regressao')">Previsão</button>
             <button onclick="carregarCSV('clientes.csv')">👥Clientes</button>
             <button onclick="carregarCSV('campanhas.csv')">📊Campanhas</button>
-            <button onclick="carregarCSV('transacoes.csv')">💵Transações</button> 
+            <button onclick="carregarCSV('transacoes.csv')">💵Transações</button>
+        </div>
+
+        <div class="qr-code-container" id="qrCodeContainer">
+            <p>Acesse pelo celular:</p>
+            <div id="qrcode"></div>
+            <p class="qr-info">Escaneie para abrir este site em outro dispositivo.</p>
         </div>
 
         <div class="imagem-container" id="imagemContainer">
@@ -150,19 +183,21 @@
         </div>
     </div>
 
+    <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
+
     <script>
         // Configuração de caminhos absolutos
         const BASE_URL = window.location.origin;
-        
+
         async function carregarCSV(nomeArquivo) {
             const container = document.getElementById('tabelaContainer');
             try {
                 container.innerHTML = `<div class="status">Carregando ${nomeArquivo}...</div>`;
-                
+
                 // URL absoluta com cache busting
                 const csvUrl = `${BASE_URL}/${nomeArquivo}?t=${Date.now()}`;
                 const response = await fetch(csvUrl);
-                
+
                 if (!response.ok) {
                     throw new Error(`Erro ${response.status}: ${response.statusText}`);
                 }
@@ -202,7 +237,7 @@
                     ];
                     formatadores = {
                         'campanha_id': v => `${v.padStart(2, '0')}`,
-                        'nome_campanha': v => `${v}`, 
+                        'nome_campanha': v => `${v}`,
                         'custo_campanha': v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v),
                         'alcance': v => `${v}`,
                         'conversao': v => `${v} %`
@@ -234,7 +269,7 @@
 
                 // Construção da tabela
                 const table = document.createElement('table');
-                
+
                 // Cabeçalho
                 const thead = table.createTHead();
                 const headerRow = thead.insertRow();
@@ -251,7 +286,7 @@
                     if (cells.length !== headers.length) continue;
 
                     // CORRIGIDO AQUI: use insertRow() para criar a linha
-                    const row = tbody.insertRow(); 
+                    const row = tbody.insertRow();
                     cells.forEach((cell, index) => {
                         const td = row.insertCell(); // insertCell() na linha (row) está correto
                         td.innerHTML = formatarCelula(cell, headers[index], formatadores);
@@ -277,8 +312,8 @@
             try {
                 // Certifica-se de que o valor é tratado como um número quando necessário
                 // Replace para lidar com o separador decimal ','
-                const numericValue = parseFloat(valor.replace('.', '').replace(',', '.')); 
-                
+                const numericValue = parseFloat(valor.replace('.', '').replace(',', '.'));
+
                 if (formatadoresAtivos[cabecalho]) {
                     // Passa o valor numérico para o formatador, se for uma coluna de moeda/número
                     return formatadoresAtivos[cabecalho](isNaN(numericValue) ? valor : numericValue);
@@ -288,7 +323,7 @@
                 return `<span style="color:red">${valor}</span>`;
             }
         }
-            
+
         function arraysIguais(a, b) {
             return a.length === b.length && a.every((v, i) => v === b[i]);
         }
@@ -299,8 +334,8 @@
 
             container.innerHTML = `
                 <div class="status">Carregando ${tipo.replace(/_/g, ' ')}...</div>
-                <img src="${imgUrl}" 
-                     alt="${tipo}" 
+                <img src="${imgUrl}"
+                     alt="${tipo}"
                      onload="this.previousElementSibling.remove()"
                      onerror="handleImageError(this, '${tipo}')"
                      style="max-width: 100%; display: block; margin: 0 auto;">
@@ -314,8 +349,26 @@
                     <small>Verifique se o arquivo ${tipo}.png existe</small>
                 </div>
             `;
-        }       
+        }
+
+        // NOVO CÓDIGO PARA GERAR O QR CODE
+        document.addEventListener('DOMContentLoaded', () => {
+            const qrCodeElement = document.getElementById('qrcode');
+            if (qrCodeElement) {
+                // A URL que o QR Code irá apontar
+                const appUrl = BASE_URL; // ou window.location.href para a página exata
+
+                // Gerar o QR Code
+                new QRCode(qrCodeElement, {
+                    text: appUrl,
+                    width: 128,
+                    height: 128,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H // Nível de correção de erro (H = High)
+                });
+            }
+        });
     </script>
 </body>
 </html>
-
